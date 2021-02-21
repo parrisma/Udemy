@@ -6,7 +6,9 @@ import matplotlib.pyplot as plt
 from src.cartpole.agent_factory import AgentFactory, Agent
 from src.cartpole.random_agent import RandomAgentFactory
 from src.cartpole.linear_model_agent import LinearModelAgentFactory
-from src.cartpole.q_model_agent import QModelAgentFactory
+from src.cartpole.y import YQModelAgentFactory
+from src.cartpole.rbf_q_model_agent import RBFQModelAgentFactory
+from src.cartpole.dqn_model_agent import DQNModelAgentFactory
 
 """
 Udemy.
@@ -23,11 +25,13 @@ class Util:
         return np.min(history), np.max(history), np.mean(history), np.std(history)
 
 
-class CartPole1:
+class CartPole:
     _env: gym.Env
     _agent: Agent
     _history: np.ndarray
     _rewards: np.ndarray
+
+    _FMT = "episode : [{}] episode reward [{:7.3f}] running reward [{:7.3f}] Steps Ave:[{:12.6f}] eps :[{:12.6f}]"
 
     def __init__(self,
                  agent_factory: AgentFactory):
@@ -69,7 +73,10 @@ class CartPole1:
         """
         self._history = np.zeros(num_episodes)
         self._rewards = np.zeros(num_episodes)
+        m = int(num_episodes / 25)
         for e in range(num_episodes):
+            if e % m == 0:
+                print("{} of {}".format(e, num_episodes))
             n, total_reward = self._play_episode()
             self._history[e] = n
             self._rewards[e] = total_reward
@@ -84,12 +91,11 @@ class CartPole1:
                      episode_number: int) -> None:
         mean_reward = self._rewards[episode_number - 100:episode_number].mean()
         mn, mx, mean_steps, stdd = Util.stats(self._history[:episode_number])
-        print("episode : [{}] reward [{:7.3f}] reward [{:7.3f}] Steps Ave:[{:12.6f}] eps :[{:12.6f}]".format(
-            episode_number,
-            self._rewards[episode_number],
-            mean_reward,
-            mean_steps,
-            self._agent.debug()['epsilon']))
+        print(self._FMT.format(episode_number,
+                               self._rewards[episode_number],
+                               mean_reward,
+                               mean_steps,
+                               self._agent.debug()['epsilon']))
         return
 
     def _plot(self):
@@ -113,9 +119,16 @@ class CartPole1:
 
 if __name__ == "__main__":
     np.random.seed(42)
+    CartPole(YQModelAgentFactory()).run(10000)
+    exit()
+
     if 'random' in sys.argv:
-        CartPole1(RandomAgentFactory()).run(100)
+        CartPole(RandomAgentFactory()).run(100)
     elif 'linear' in sys.argv:
-        CartPole1(LinearModelAgentFactory()).run(5000)
+        CartPole(LinearModelAgentFactory()).run(5000)
+    elif 'q' in sys.argv:
+        CartPole(YQModelAgentFactory()).run(10000)
+    elif 'rbf' in sys.argv:
+        CartPole(RBFQModelAgentFactory()).run(500)
     else:
-        CartPole1(QModelAgentFactory()).run(10000)
+        CartPole(DQNModelAgentFactory()).run(50)
